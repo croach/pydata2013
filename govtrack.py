@@ -164,7 +164,7 @@ def trim_edges(graph, weight=1):
 
     Arguments_api:
     graph -- the graph to trim
-_api
+
     Keyword arguments:
     weight -- the value for which all edges with weights equal to, or less than
         it, will be removed (default 1).
