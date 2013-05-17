@@ -277,7 +277,7 @@ if __name__ == '__main__':
         # This is mainly just for visualization purposes, so you can visually discern
         # who has the greatest betweenness.
         b = nx.centrality.betweenness_centrality(trim_edges(g, weight=10), normalized=False)
-        node_size = lambda n: b[n] if args.betweenness else 300
+        node_size = lambda n: b[n] if args.resize else 300
 
         nx.draw_networkx_nodes(g, pos, nodelist=dems, node_color='blue', node_size=map(node_size, dems))
         nx.draw_networkx_nodes(g, pos, nodelist=reps, node_color='red', node_size=map(node_size, reps))
