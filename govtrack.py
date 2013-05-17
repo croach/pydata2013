@@ -125,9 +125,22 @@ def clean_node_attr_dict(attr_dict):
     attr_dict -- the node attribute dict to be cleaned
     """
     n = copy.deepcopy(attr_dict)
+
+    # These id's are missing for many members of congress, and when they're
+    # missing, they break serialization of the graph and since I don't use
+    # them, I can just delete them from the node.
     del n['youtubeid']
     del n['twitterid']
     del n['cspanid']
+
+    # When the node is serialized, Networkx takes the key associated with the
+    # node in the Graph's node dict (e.g., G.node[key]) and adds it to the
+    # serialized node dict with the key 'id'. If an 'id' key already exists
+    # in the node's attr_dict, a conflict occurs. This code changes the name
+    # of the node's 'id' to 'govtrackid' to prevent this conflict from occuring.
+    n['govtrackid'] = n.pop('id')
+
+    # Add the member's party affiliation (parsed from their name)
     n['party_affiliation'] = party_affiliation(n['name'])
     return n
 
