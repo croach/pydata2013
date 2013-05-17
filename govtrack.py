@@ -15,9 +15,24 @@ downloaded data after its first retrieval. The data is cached into a hidden
 directory called .cache in the same directory where the script is located. To
 ignore the cached data and retrieve it again, you can use the --ignore-cache
 option.
+
+As an example of how to use the script, if you wanted to view the network for
+the House of Representatives of the 112th congress (January 3, 2011 -
+January 3, 2013), and you want to see it in the browser with nodes resized
+according to their betweeness values, you could use the following command:
+
+    $ python %s -br 112 lower
+
+A few things to notice in the previous command: First, you could have also used
+'representatives' in place of lower, if it makes the command a little more
+intuitive for you. Second, the '-b' (--browser) option turns on in-browser
+viewing. Third, the '-r' (--resize) option turns on node resizing according to
+the betweeness value associated with each node.
+
 """
 
 import os
+import sys
 import urllib2
 import re
 import copy
@@ -207,17 +222,17 @@ def sort_nodes(graph, m, desc=True):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__,
+    parser = argparse.ArgumentParser(description=__doc__ % sys.argv[0],
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('congress', type=int, metavar='CONGRESS',
-        help='the number for the meeting of congress (the ???th congress)')
+        help='number for the meeting of congress (the ???th congress)')
     parser.add_argument('house', type=str, metavar='HOUSE',
         choices=['lower', 'representatives', 'upper', 'senate'],
-        help='the house ([lower|representatives] or [upper|senate])')
+        help='house of congress (lower/representatives, upper/senate)')
     parser.add_argument('--ignore-cache', action='store_true',
-        help='ignore the cache and do a fresh download all bills from govtrack.us')
+        help='ignore the cache and do a fresh download of all bills')
     parser.add_argument('--limit', '-l', type=int, action='store', default=None,
-        help='the number of bills to download (downloads all bills by default)')
+        help='the number of bills to download (all bills by default)')
     parser.add_argument('--trim', '-t', type=int, action='store', default=None,
         help='remove all edges with a weight at or below the trim value')
     parser.add_argument('--betweenness', '-b', action='store_true',
