@@ -43,6 +43,7 @@ except ImportError:
     import json
 
 import networkx as nx
+from networkx.readwrite import json_graph
 import matplotlib.pyplot as plt
 
 import url
@@ -234,9 +235,11 @@ if __name__ == '__main__':
     parser.add_argument('--limit', '-l', type=int, action='store', default=None,
         help='the number of bills to download (all bills by default)')
     parser.add_argument('--trim', '-t', type=int, action='store', default=None,
-        help='remove all edges with a weight at or below the trim value')
-    parser.add_argument('--betweenness', '-b', action='store_true',
-        help='resize the nodes in the graph according to their betweenness')
+        help='remove edges with a weight at or below the trim value')
+    parser.add_argument('--resize', '-r', action='store_true',
+        help='resize nodes in the graph according to their betweenness')
+    parser.add_argument('--browser', '-b', action='store_true',
+        help='show the network visualization in a browser (uses D3)')
     args = parser.parse_args()
 
     # Create the .cache directory if it doesn't already exist
@@ -263,20 +266,30 @@ if __name__ == '__main__':
     g = create_graph(bills)
     if args.trim is not None:
         g = trim_edges(g, weight=args.trim)
-    pos = nx.fruchterman_reingold_layout(g)
-    dems = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'democrat']
-    reps = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'republican']
-    inds = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'independent']
 
-    # Removing the weakest edges before calculating the betweenness centralities.
-    # This is mainly just for visualization purposes, so you can visually discern
-    # who has the greatest betweenness.
-    b = nx.centrality.betweenness_centrality(trim_edges(g, weight=10), normalized=False)
-    node_size = lambda n: b[n] if args.betweenness else 300
+    if not args.browser:
+        pos = nx.fruchterman_reingold_layout(g)
+        dems = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'democrat']
+        reps = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'republican']
+        inds = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'independent']
 
-    nx.draw_networkx_nodes(g, pos, nodelist=dems, node_color='blue', node_size=map(node_size, dems))
-    nx.draw_networkx_nodes(g, pos, nodelist=reps, node_color='red', node_size=map(node_size, reps))
-    nx.draw_networkx_nodes(g, pos, nodelist=inds, node_color='gray', node_size=map(node_size, inds))
-    nx.draw_networkx_edges(g, pos, alpha=0.05)
-    plt.show()
+        # Removing the weakest edges before calculating the betweenness centralities.
+        # This is mainly just for visualization purposes, so you can visually discern
+        # who has the greatest betweenness.
+        b = nx.centrality.betweenness_centrality(trim_edges(g, weight=10), normalized=False)
+        node_size = lambda n: b[n] if args.betweenness else 300
+
+        nx.draw_networkx_nodes(g, pos, nodelist=dems, node_color='blue', node_size=map(node_size, dems))
+        nx.draw_networkx_nodes(g, pos, nodelist=reps, node_color='red', node_size=map(node_size, reps))
+        nx.draw_networkx_nodes(g, pos, nodelist=inds, node_color='gray', node_size=map(node_size, inds))
+        nx.draw_networkx_edges(g, pos, alpha=0.05)
+        plt.show()
+    else:
+        # TODO: Serialize the graph to a temp directory (and/or file). Then,
+        #       either copy all of the HTML, CSS, and JavaScript there and run a
+        #       SimpleHTTPServer instance, or create a custom web server class
+        #       that can serve files from both the browser directory and the
+        #       temp directory.
+        with open('network.json', 'w') as fout:
+            json_graph.dump(g, fout)
 
