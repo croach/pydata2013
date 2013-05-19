@@ -290,6 +290,7 @@ if __name__ == '__main__':
         #       SimpleHTTPServer instance, or create a custom web server class
         #       that can serve files from both the browser directory and the
         #       temp directory.
-        with open('network.json', 'w') as fout:
-            json_graph.dump(g, fout)
+        json_graph.dump(g, sys.stdout)
+
+        
 
