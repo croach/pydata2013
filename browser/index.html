@@ -37,6 +37,7 @@
     <script type="text/javascript">
     var w = 500;
     var h = 400;
+    var r = 5;
 
     var svg = d3.select("body")
                 .append("svg")
@@ -64,7 +65,7 @@
                        .enter()
                        .append("circle")
                        .attr("class", "node")
-                       .attr("r", 5)
+                       .attr("r", r)
                        .style("fill", function(d) {
                             if (d.party_affiliation === "democrat") {
                                 return "blue";
