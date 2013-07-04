@@ -1,19 +1,63 @@
 window.onload = function() {
-  var w = 500;
-  var h = 400;
-  var r = 5;
-
-  var svg = d3.select("body")
-              .append("svg")
-              .attr("width", w)
-              .attr("height", h);
+  var w = 800;
+  var h = 450;
 
   d3.json('js/network.json', function(error, graph) {
       if (error) return console.warn(error);
+
+      /* Scale functions */
+      var betweenness_domain = [
+        d3.min(graph['nodes'], function(n) { return n['betweenness']; }),
+        d3.max(graph['nodes'], function(n) { return n['betweenness']; })
+      ];
+
+      var weightDomain = [
+        d3.min(graph['links'], function(d) { return d['weight']; }),
+        d3.max(graph['links'], function(d) { return d['weight']; })
+      ];
+
+      var nodeSize = d3.scale.linear()
+                       .domain(betweenness_domain)
+                       .range([3, 30]);
+
+      // var nodeCharge = d3.scale.linear()
+      //                    .domain(betweenness_domain)
+      //                    .range([-10, -300]);
+
+      var linkStrength = d3.scale.linear()
+                        .domain(weightDomain)
+                        .range([0, 0.75])
+                        .clamp(true);
+
+      var linkDistance = d3.scale.linear()
+                        .domain(weightDomain)
+                        .range([50, 400])
+                        .clamp(true);
+
+      var tip = d3.tip()
+                  .attr('class', 'd3-tip')
+                  .html(function(d) {
+                    return "<span>" + d['name'] + "</span>";
+                  });
+
+      var svg = d3.select("body")
+                  .append("svg")
+                  .attr("width", w)
+                  .attr("height", h)
+                  .call(tip);
+
       var force = d3.layout.force()
-                    .charge(-600)
-                    .linkDistance(70)
-                    // .gravity(.75)
+                    .charge(-225)
+                    // .charge(function(d) {
+                    //     return nodeCharge(d['betweenness']);
+                    // })
+                    .linkDistance(function(d) {
+                        return linkDistance(d['weight']);
+                    })
+                    .linkStrength(function(d) {
+                        return linkStrength(d['weight']);
+                    })
+                    .gravity(.1)
                     .nodes(graph.nodes)
                     .links(graph.links)
                     .size([w, h])
@@ -30,12 +74,15 @@ window.onload = function() {
                         }
                      });
 
+
       var nodes = svg.selectAll(".node")
                      .data(graph.nodes)
                      .enter()
                      .append("circle")
                      .attr("class", "node")
-                     .attr("r", r)
+                     .attr("r", function(d) {
+                        return nodeSize(d['betweenness']);
+                     })
                      .style("fill", function(d) {
                         if (d.party_affiliation === "democrat") {
                             return "#c5d7ea";
@@ -53,23 +100,30 @@ window.onload = function() {
                         } else {
                             return "#606060";
                         }
-                     });
+                     })
+                     .on('mouseover', function(d) { tip.show(d); })
+                     .on('mouseout', function(d) { tip.hide(d); })
+                     .call(force.drag);
 
       force.on("tick", function() {
+          var padding = 3;
           // The code below was taken from Mike Bostock's Bounding Box example
           // which was shown in his talk on data visualization.
           // Example: http://mbostock.github.io/d3/talk/20110921/bounding.html
           // Talk Video: http://vimeo.com/29458354
-          nodes.attr("cx", function(d) { return d.x = Math.max(r, Math.min(w - r, d.x)); })
-               .attr("cy", function(d) { return d.y = Math.max(r, Math.min(h - r, d.y)); });
+          nodes.attr("cx", function(d) {
+                  var r = nodeSize(d["betweenness"]) + padding;
+                  return d.x = Math.max(r, Math.min(w - r, d.x));
+               })
+               .attr("cy", function(d) {
+                  var r = nodeSize(d["betweenness"]) + padding;
+                  return d.y = Math.max(r, Math.min(h - r, d.y));
+               });
 
           links.attr("x1", function(d) { return d.source.x; })
                .attr("y1", function(d) { return d.source.y; })
                .attr("x2", function(d) { return d.target.x; })
                .attr("y2", function(d) { return d.target.y; });
-
-          // nodes.attr("cx", function(d) { return d.x; })
-          //      .attr("cy", function(d) { return d.y; });
       })
 
   });
