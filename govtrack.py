@@ -267,17 +267,21 @@ if __name__ == '__main__':
     if args.trim is not None:
         g = trim_edges(g, weight=args.trim)
 
+    # Calculate the betweenness centralities of the nodes. Removing the weakest
+    # edges before calculating the betweenness centralities mainly just for
+    # visualization purposes, so it's possible to visually discern which nodes
+    # have the greatest betweenness.
+    betweeness_centralities = nx.centrality.betweenness_centrality(trim_edges(g, weight=10), normalized=False)
+    for node_id, betweeness in betweeness_centralities.items():
+        g.node[node_id]['betweenness'] = betweeness
+
     if not args.browser:
         pos = nx.fruchterman_reingold_layout(g)
         dems = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'democrat']
         reps = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'republican']
         inds = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'independent']
 
-        # Removing the weakest edges before calculating the betweenness centralities.
-        # This is mainly just for visualization purposes, so you can visually discern
-        # who has the greatest betweenness.
-        b = nx.centrality.betweenness_centrality(trim_edges(g, weight=10), normalized=False)
-        node_size = lambda n: b[n] if args.resize else 300
+        node_size = lambda nid: g.node[nid]['betweenness'] if args.resize else 300
 
         nx.draw_networkx_nodes(g, pos, nodelist=dems, node_color='blue', node_size=map(node_size, dems))
         nx.draw_networkx_nodes(g, pos, nodelist=reps, node_color='red', node_size=map(node_size, reps))
@@ -292,5 +296,5 @@ if __name__ == '__main__':
         #       temp directory.
         json_graph.dump(g, sys.stdout)
 
-        
+
 
