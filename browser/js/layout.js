@@ -1,5 +1,5 @@
 window.onload = function() {
-  var w = 800;
+  var w = 700;
   var h = 400;
 
   d3.json('js/network.json', function(error, graph) {
