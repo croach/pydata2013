@@ -70,8 +70,10 @@ window.onload = function() {
                      .append("line")
                      .attr("class", "link")
                      .style("stroke", function(d) {
+                        // Hiding some of the weaker links to make the
+                        // visualization more responsive and less cluttered
                         if (d.weight > 10) {
-                          return "rgba(32,32,32,.15)";
+                          return "rgba(32, 32, 32, " + linkStrength(d.weight) + ")";
                         }
                      });
 
