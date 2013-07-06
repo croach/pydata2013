@@ -38,6 +38,21 @@ window.onload = function() {
         node.padding = nodeSize(node.betweenness) + randBuffer();
       };
 
+      // Add neighbor and edges arrays to each of the nodes
+      for (var i = graph.links.length - 1; i >= 0; i--) {
+        var link = graph.links[i];
+        var source = graph.nodes[link.source]
+            target = graph.nodes[link.target];
+        source.neighbors = source.neighbors || [];
+        source.neighbors.push(target);
+        target.neighbors = target.neighbors || [];
+        target.neighbors.push(source);
+        source.edges = source.edges || [];
+        source.edges.push(link);
+        target.edges = target.edges || [];
+        target.edges.push(link);
+      };
+
       var tip = d3.tip()
                   .attr('class', 'd3-tip')
                   .html(function(d) {
@@ -104,9 +119,41 @@ window.onload = function() {
                             return "#606060";
                         }
                      })
-                     .on('mouseover', function(d) { tip.show(d); })
-                     .on('mouseout', function(d) { tip.hide(d); })
                      .call(force.drag);
+
+      // Add mouseout and mouseover event listeners to highlight a
+      // a neighborhood of nodes whenever the user hovers over one.
+      nodes.on("mouseover", function(source) {
+        tip.show(source);
+
+        d3.selectAll("circle")
+          .data(source.neighbors.concat([source]), function(d) { return d.name; })
+            .style("fill-opacity", 1.0)
+            .style("stroke-opacity", 1.0)
+          .exit()
+            .style("fill-opacity", 0.3)
+            .style("stroke-opacity", 0.3);
+
+        d3.selectAll("line")
+          .data(source.edges, function(d) { return d.source.name + " - " + d.target.name; })
+            .style("stroke", function(d) { return "rgba(32, 32, 32, " + linkStrength(d.weight) + ")"; })
+          .exit()
+            .style("stroke-opacity", 0);
+      }).on("mouseout", function(d) {
+        tip.hide(d);
+
+        d3.selectAll('circle')
+          .style("fill-opacity", 1.0)
+          .style("stroke-opacity", 1.0);
+
+        d3.selectAll("line")
+          .style("stroke-opacity", 1.0)
+          .style("stroke", function(d) {
+              if (d.weight > 10) {
+                return "rgba(32, 32, 32, " + linkStrength(d.weight) + ")";
+              }
+          });
+      });
 
       force.on("tick", function() {
           // The code below was taken from Mike Bostock's Bounding Box example
