@@ -20,10 +20,6 @@ window.onload = function() {
                        .domain(betweenness_domain)
                        .range([3, 30]);
 
-      // var nodeCharge = d3.scale.linear()
-      //                    .domain(betweenness_domain)
-      //                    .range([-10, -300]);
-
       var linkStrength = d3.scale.linear()
                         .domain(weightDomain)
                         .range([0, 0.75])
@@ -48,14 +44,11 @@ window.onload = function() {
 
       var force = d3.layout.force()
                     .charge(-225)
-                    // .charge(function(d) {
-                    //     return nodeCharge(d['betweenness']);
-                    // })
                     .linkDistance(function(d) {
-                        return linkDistance(d['weight']);
+                        return linkDistance(d.weight);
                     })
                     .linkStrength(function(d) {
-                        return linkStrength(d['weight']);
+                        return linkStrength(d.weight);
                     })
                     .gravity(.1)
                     .nodes(graph.nodes)
