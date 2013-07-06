@@ -1,6 +1,6 @@
 window.onload = function() {
   var w = 800;
-  var h = 450;
+  var h = 400;
 
   d3.json('js/network.json', function(error, graph) {
       if (error) return console.warn(error);
@@ -29,6 +29,14 @@ window.onload = function() {
                         .domain(weightDomain)
                         .range([50, 400])
                         .clamp(true);
+
+      // Add a bit of padding to each node to prevent them from  hitting the
+      // edge of the SVG container and randomized to make it look more natural
+      var randBuffer = d3.random.normal(20, 8);
+      for (var i = graph.nodes.length - 1; i >= 0; i--) {
+        var node = graph.nodes[i];
+        node.padding = nodeSize(node.betweenness) + randBuffer();
+      };
 
       var tip = d3.tip()
                   .attr('class', 'd3-tip')
@@ -99,18 +107,15 @@ window.onload = function() {
                      .call(force.drag);
 
       force.on("tick", function() {
-          var padding = 3;
           // The code below was taken from Mike Bostock's Bounding Box example
           // which was shown in his talk on data visualization.
           // Example: http://mbostock.github.io/d3/talk/20110921/bounding.html
           // Talk Video: http://vimeo.com/29458354
           nodes.attr("cx", function(d) {
-                  var r = nodeSize(d["betweenness"]) + padding;
-                  return d.x = Math.max(r, Math.min(w - r, d.x));
+                 return d.x = Math.max(d.padding, Math.min(w - d.padding, d.x));
                })
                .attr("cy", function(d) {
-                  var r = nodeSize(d["betweenness"]) + padding;
-                  return d.y = Math.max(r, Math.min(h - r, d.y));
+                 return d.y = Math.max(d.padding, Math.min(h - d.padding, d.y));
                });
 
           links.attr("x1", function(d) { return d.source.x; })
