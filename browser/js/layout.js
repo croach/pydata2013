@@ -10,27 +10,41 @@ window.onload = function() {
         return attrs[1];
       }
     };
-    return "betweenness";
+    return "degree";
   }
+
 
   d3.json("js/network.json", function(error, g) {
       if (error) return console.warn(error);
 
+
       /* Scale functions */
       var nodeSizeAttribute = getNodeSizeAttribute(g);
-      var nodeSizeDomain = [
-        d3.min(g["nodes"], function(n) { return n[nodeSizeAttribute]; }),
-        d3.max(g["nodes"], function(n) { return n[nodeSizeAttribute]; })
-      ];
+      function nodeSize(node) {
+        // debugger;
+        var nodeSizeDomain = [
+          d3.min(g["nodes"], function(n) { return n[nodeSizeAttribute]; }),
+          d3.max(g["nodes"], function(n) { return n[nodeSizeAttribute]; })
+        ];
+        var nodeSizeScale = d3.scale.linear()
+                              .domain(nodeSizeDomain)
+                              .range([3, 30]);
+        return nodeSizeScale(node[nodeSizeAttribute]);
+      }
+
+      // var nodeSizeDomain = [
+      //   d3.min(g["nodes"], function(n) { return n[nodeSizeAttribute]; }),
+      //   d3.max(g["nodes"], function(n) { return n[nodeSizeAttribute]; })
+      // ];
 
       var weightDomain = [
         d3.min(g['links'], function(d) { return d['weight']; }),
         d3.max(g['links'], function(d) { return d['weight']; })
       ];
 
-      var nodeSize = d3.scale.linear()
-                       .domain(nodeSizeDomain)
-                       .range([3, 30]);
+      // var nodeSize = d3.scale.linear()
+      //                  .domain(nodeSizeDomain)
+      //                  .range([3, 30]);
 
       var linkStrength = d3.scale.linear()
                         .domain(weightDomain)
@@ -47,7 +61,7 @@ window.onload = function() {
       var randBuffer = d3.random.normal(20, 8);
       for (var i = g.nodes.length - 1; i >= 0; i--) {
         var node = g.nodes[i];
-        node.padding = nodeSize(node[nodeSizeAttribute]) + randBuffer();
+        node.padding = nodeSize(node) + randBuffer();
       };
 
       // Add neighbor and edges arrays to each of the nodes
@@ -71,8 +85,7 @@ window.onload = function() {
                     return "<span>" + d['name'] + "</span>";
                   });
 
-      var svg = d3.select("body")
-                  .append("svg")
+      var svg = d3.select("svg#network")
                   .attr("width", w)
                   .attr("height", h)
                   .call(tip);
@@ -90,6 +103,13 @@ window.onload = function() {
                     .links(g.links)
                     .size([w, h])
                     .start();
+
+      function resizeNodes() {
+        nodeSizeAttribute = this.options[this.selectedIndex].value;
+        force.resume();
+      }
+      d3.select("#node-size-attribute").on("change", resizeNodes);
+
 
       var links = svg.selectAll(".link")
                      .data(g.links)
@@ -111,7 +131,7 @@ window.onload = function() {
                      .append("circle")
                      .attr("class", "node")
                      .attr("r", function(d) {
-                        return nodeSize(d[nodeSizeAttribute]);
+                        return nodeSize(d);
                      })
                      .style("fill", function(d) {
                         if (d.party_affiliation === "democrat") {
@@ -131,13 +151,13 @@ window.onload = function() {
                             return "#606060";
                         }
                      })
+                     .on("mouseover.tip-show", tip.show)
+                     .on("mouseout.tip-hide", tip.hide)
                      .call(force.drag);
 
       // Add mouseout and mouseover event listeners to highlight a
       // a neighborhood of nodes whenever the user hovers over one.
       nodes.on("mouseover", function(source) {
-        tip.show(source);
-
         d3.selectAll("circle")
           .data(source.neighbors.concat([source]), function(d) { return d.name; })
             .style("fill-opacity", 1.0)
@@ -152,8 +172,6 @@ window.onload = function() {
           .exit()
             .style("stroke-opacity", 0);
       }).on("mouseout", function(d) {
-        tip.hide(d);
-
         d3.selectAll('circle')
           .style("fill-opacity", 1.0)
           .style("stroke-opacity", 1.0);
@@ -168,6 +186,11 @@ window.onload = function() {
       });
 
       force.on("tick", function() {
+          nodes.transition().duration(150)
+               .attr("r", function(d) {
+                 return nodeSize(d);
+               });
+
           // The code below was taken from Mike Bostock's Bounding Box example
           // which was shown in his talk on data visualization.
           // Example: http://mbostock.github.io/d3/talk/20110921/bounding.html
