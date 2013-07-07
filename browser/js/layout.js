@@ -2,22 +2,34 @@ window.onload = function() {
   var w = 700;
   var h = 400;
 
-  d3.json('js/network.json', function(error, graph) {
+  function getNodeSizeAttribute(g) {
+    var graphAttrs = g.graph;
+    for (var i = graphAttrs.length - 1; i >= 0; i--) {
+      var attrs = graphAttrs[i];
+      if (attrs[0] === 'resize') {
+        return attrs[1];
+      }
+    };
+    return "betweenness";
+  }
+
+  d3.json("js/network.json", function(error, g) {
       if (error) return console.warn(error);
 
       /* Scale functions */
-      var betweenness_domain = [
-        d3.min(graph['nodes'], function(n) { return n['betweenness']; }),
-        d3.max(graph['nodes'], function(n) { return n['betweenness']; })
+      var nodeSizeAttribute = getNodeSizeAttribute(g);
+      var nodeSizeDomain = [
+        d3.min(g["nodes"], function(n) { return n[nodeSizeAttribute]; }),
+        d3.max(g["nodes"], function(n) { return n[nodeSizeAttribute]; })
       ];
 
       var weightDomain = [
-        d3.min(graph['links'], function(d) { return d['weight']; }),
-        d3.max(graph['links'], function(d) { return d['weight']; })
+        d3.min(g['links'], function(d) { return d['weight']; }),
+        d3.max(g['links'], function(d) { return d['weight']; })
       ];
 
       var nodeSize = d3.scale.linear()
-                       .domain(betweenness_domain)
+                       .domain(nodeSizeDomain)
                        .range([3, 30]);
 
       var linkStrength = d3.scale.linear()
@@ -33,16 +45,16 @@ window.onload = function() {
       // Add a bit of padding to each node to prevent them from  hitting the
       // edge of the SVG container and randomized to make it look more natural
       var randBuffer = d3.random.normal(20, 8);
-      for (var i = graph.nodes.length - 1; i >= 0; i--) {
-        var node = graph.nodes[i];
-        node.padding = nodeSize(node.betweenness) + randBuffer();
+      for (var i = g.nodes.length - 1; i >= 0; i--) {
+        var node = g.nodes[i];
+        node.padding = nodeSize(node[nodeSizeAttribute]) + randBuffer();
       };
 
       // Add neighbor and edges arrays to each of the nodes
-      for (var i = graph.links.length - 1; i >= 0; i--) {
-        var link = graph.links[i];
-        var source = graph.nodes[link.source]
-            target = graph.nodes[link.target];
+      for (var i = g.links.length - 1; i >= 0; i--) {
+        var link = g.links[i];
+        var source = g.nodes[link.source]
+            target = g.nodes[link.target];
         source.neighbors = source.neighbors || [];
         source.neighbors.push(target);
         target.neighbors = target.neighbors || [];
@@ -74,13 +86,13 @@ window.onload = function() {
                         return linkStrength(d.weight);
                     })
                     .gravity(.1)
-                    .nodes(graph.nodes)
-                    .links(graph.links)
+                    .nodes(g.nodes)
+                    .links(g.links)
                     .size([w, h])
                     .start();
 
       var links = svg.selectAll(".link")
-                     .data(graph.links)
+                     .data(g.links)
                      .enter()
                      .append("line")
                      .attr("class", "link")
@@ -94,12 +106,12 @@ window.onload = function() {
 
 
       var nodes = svg.selectAll(".node")
-                     .data(graph.nodes)
+                     .data(g.nodes)
                      .enter()
                      .append("circle")
                      .attr("class", "node")
                      .attr("r", function(d) {
-                        return nodeSize(d['betweenness']);
+                        return nodeSize(d[nodeSizeAttribute]);
                      })
                      .style("fill", function(d) {
                         if (d.party_affiliation === "democrat") {

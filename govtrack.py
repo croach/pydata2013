@@ -240,7 +240,7 @@ if __name__ == '__main__':
         help='the number of bills to download (all bills by default)')
     parser.add_argument('--trim', '-t', type=int, action='store', default=None,
         help='remove edges with a weight at or below the trim value')
-    parser.add_argument('--resize', '-r', action='store_true',
+    parser.add_argument('--resize', '-r', action='store', default=None,
         help='resize nodes relative to betweenness (browser default)')
     parser.add_argument('--browser', '-b', action='store_true',
         help='show the network visualization in a browser (uses D3)')
@@ -275,10 +275,12 @@ if __name__ == '__main__':
     # Calculate the betweenness centralities of the nodes. Removing the weakest
     # edges before calculating the betweenness centralities mainly just for
     # visualization purposes, so it's possible to visually discern which nodes
-    # have the greatest betweenness.
-    betweeness_centralities = nx.centrality.betweenness_centrality(trim_edges(g, weight=10), normalized=False)
-    for node_id, betweeness in betweeness_centralities.items():
-        g.node[node_id]['betweenness'] = betweeness
+    # have stronger relationships with their colleagues and betweenness.
+    betweenness_centralities = nx.centrality.betweenness_centrality(trim_edges(g, weight=10), normalized=False)
+    degrees = nx.degree(trim_edges(g, weight=10))
+    for node_id in g.nodes():
+        g.node[node_id]['betweenness'] = betweenness_centralities[node_id]
+        g.node[node_id]['degree'] = degrees[node_id]
 
     if not args.browser:
         pos = nx.fruchterman_reingold_layout(g)
@@ -286,7 +288,7 @@ if __name__ == '__main__':
         reps = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'republican']
         inds = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'independent']
 
-        node_size = lambda nid: g.node[nid]['betweenness'] if args.resize else 300
+        node_size = lambda nid: g.node[nid][args.resize] if args.resize else 300
 
         nx.draw_networkx_nodes(g, pos, nodelist=dems, node_color='blue', node_size=map(node_size, dems))
         nx.draw_networkx_nodes(g, pos, nodelist=reps, node_color='red', node_size=map(node_size, reps))
@@ -304,6 +306,11 @@ if __name__ == '__main__':
         browser_dir = os.path.join(pwd, 'browser')
         network_file = os.path.join(browser_dir, 'js', 'network.json')
         with open(network_file, 'w') as fout:
+            # serialized_graph = json_graph.dumps(g)
+            # serialized_graph['resize'] = args.resize
+            # fout.write(serialized_graph)
+            g.graph['resize'] = args.resize
+            g.graph['foo'] = 'bar'
             json_graph.dump(g, fout)
 
         # Switch to the browser directory and start up a simple HTTP server
