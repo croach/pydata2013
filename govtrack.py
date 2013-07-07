@@ -18,16 +18,15 @@ option.
 
 As an example of how to use the script, if you wanted to view the network for
 the House of Representatives of the 112th congress (January 3, 2011 -
-January 3, 2013), and you want to see it in the browser with nodes resized
-according to their betweeness values, you could use the following command:
+January 3, 2013), and you want to see it in the browser, you could use the
+following command:
 
-    $ python %s -br 112 lower
+    $ python %s -b 112 lower
 
 A few things to notice in the previous command: First, you could have also used
 'representatives' in place of lower, if it makes the command a little more
 intuitive for you. Second, the '-b' (--browser) option turns on in-browser
-viewing. Third, the '-r' (--resize) option turns on node resizing according to
-the betweeness value associated with each node.
+viewing.
 
 """
 
@@ -37,6 +36,11 @@ import urllib2
 import re
 import copy
 import argparse
+from multiprocessing import Process
+from SimpleHTTPServer import SimpleHTTPRequestHandler
+from SocketServer import TCPServer
+import webbrowser
+
 try:
     import simplejson as json
 except ImportError:
@@ -237,14 +241,15 @@ if __name__ == '__main__':
     parser.add_argument('--trim', '-t', type=int, action='store', default=None,
         help='remove edges with a weight at or below the trim value')
     parser.add_argument('--resize', '-r', action='store_true',
-        help='resize nodes in the graph according to their betweenness')
+        help='resize nodes relative to betweenness (browser default)')
     parser.add_argument('--browser', '-b', action='store_true',
         help='show the network visualization in a browser (uses D3)')
     args = parser.parse_args()
 
-    # Create the .cache directory if it doesn't already exist
     root_dir = os.path.dirname(os.path.realpath(__file__))
     cache_dir = os.path.join(root_dir, '.cache')
+
+    # Create the .cache directory if it doesn't already exist
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
@@ -289,12 +294,27 @@ if __name__ == '__main__':
         nx.draw_networkx_edges(g, pos, alpha=0.05)
         plt.show()
     else:
-        # TODO: Serialize the graph to a temp directory (and/or file). Then,
-        #       either copy all of the HTML, CSS, and JavaScript there and run a
-        #       SimpleHTTPServer instance, or create a custom web server class
-        #       that can serve files from both the browser directory and the
-        #       temp directory.
-        json_graph.dump(g, sys.stdout)
+        # TODO: Create a script that compiles all external files into the
+        #       govtrack file (see virtualenv for details on how to do this).
+        #       With that done, create all of the HTML, CSS, and JS files on
+        #       invocation and write them to a temp directory.
 
+        # Serialize the graph to the network.json file
+        pwd = os.path.dirname(os.path.realpath(__file__))
+        browser_dir = os.path.join(pwd, 'browser')
+        network_file = os.path.join(browser_dir, 'js', 'network.json')
+        with open(network_file, 'w') as fout:
+            json_graph.dump(g, fout)
 
-
+        # Switch to the browser directory and start up a simple HTTP server
+        os.chdir(browser_dir)
+        Server = type('Server', (TCPServer, object), {'allow_reuse_address': True})
+        httpd = Server(("", 8080), SimpleHTTPRequestHandler)
+        p = Process(target=httpd.serve_forever)
+        p.start()
+        webbrowser.open("http://localhost:8080")
+        try:
+            print "Press Ctrl-c to quit..."
+            p.join()
+        except KeyboardInterrupt:
+            p.terminate()
