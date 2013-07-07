@@ -21,12 +21,14 @@ the House of Representatives of the 112th congress (January 3, 2011 -
 January 3, 2013), and you want to see it in the browser, you could use the
 following command:
 
-    $ python %s -b 112 lower
+    $ python %s -b --resize=betweenness 112 lower
 
 A few things to notice in the previous command: First, you could have also used
 'representatives' in place of lower, if it makes the command a little more
 intuitive for you. Second, the '-b' (--browser) option turns on in-browser
-viewing.
+viewing. Finally, the '-r' (--resize) option turns on resizing of the nodes
+relative to a given centrality statistic, at this point the 'resize' value can
+be set to either 'degree' or 'betweenness'.
 
 """
 

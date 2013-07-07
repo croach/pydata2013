@@ -1,7 +1,9 @@
 window.onload = function() {
   var w = 700;
   var h = 400;
-  var defaultNodeSizeAttribute = "degree";
+  var noAttributeSelected = '---'
+  var defaultNodeSizeAttribute = noAttributeSelected;
+  var defaultNodeSize = 10;
 
   d3.json("js/network.json", function(error, g) {
 
@@ -29,6 +31,10 @@ window.onload = function() {
 
       function nodeSize(node) {
         var nodeSizeAttribute = d3.select("#node-size-attribute").node().value;
+
+        if (nodeSizeAttribute === noAttributeSelected) {
+          return defaultNodeSize;
+        }
 
         var nodeSizeDomain = [
           d3.min(g["nodes"], function(n) { return n[nodeSizeAttribute]; }),
