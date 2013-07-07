@@ -1,6 +1,6 @@
 ## PyData 2013 - Intro to Network Science
 
-This is the code from my talk ["Intro to Network Science"][talk] talk at [PyData][pydata] 2013.
+This is the code from my ["Intro to Network Science"][talk] talk at [PyData][pydata] 2013.
 
 ### Requirements
 
