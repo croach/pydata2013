@@ -306,11 +306,8 @@ if __name__ == '__main__':
         browser_dir = os.path.join(pwd, 'browser')
         network_file = os.path.join(browser_dir, 'js', 'network.json')
         with open(network_file, 'w') as fout:
-            # serialized_graph = json_graph.dumps(g)
-            # serialized_graph['resize'] = args.resize
-            # fout.write(serialized_graph)
-            g.graph['resize'] = args.resize
-            g.graph['foo'] = 'bar'
+            if args.resize is not None:
+                g.graph['resize'] = args.resize
             json_graph.dump(g, fout)
 
         # Switch to the browser directory and start up a simple HTTP server

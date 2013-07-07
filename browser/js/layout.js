@@ -1,68 +1,12 @@
 window.onload = function() {
   var w = 700;
   var h = 400;
-
-  function getNodeSizeAttribute(g) {
-    var graphAttrs = g.graph;
-    for (var i = graphAttrs.length - 1; i >= 0; i--) {
-      var attrs = graphAttrs[i];
-      if (attrs[0] === 'resize') {
-        return attrs[1];
-      }
-    };
-    return "degree";
-  }
-
+  var defaultNodeSizeAttribute = "degree";
 
   d3.json("js/network.json", function(error, g) {
+
+      // If any errors occur reading the network file, log them and exit
       if (error) return console.warn(error);
-
-
-      /* Scale functions */
-      var nodeSizeAttribute = getNodeSizeAttribute(g);
-      function nodeSize(node) {
-        // debugger;
-        var nodeSizeDomain = [
-          d3.min(g["nodes"], function(n) { return n[nodeSizeAttribute]; }),
-          d3.max(g["nodes"], function(n) { return n[nodeSizeAttribute]; })
-        ];
-        var nodeSizeScale = d3.scale.linear()
-                              .domain(nodeSizeDomain)
-                              .range([3, 30]);
-        return nodeSizeScale(node[nodeSizeAttribute]);
-      }
-
-      // var nodeSizeDomain = [
-      //   d3.min(g["nodes"], function(n) { return n[nodeSizeAttribute]; }),
-      //   d3.max(g["nodes"], function(n) { return n[nodeSizeAttribute]; })
-      // ];
-
-      var weightDomain = [
-        d3.min(g['links'], function(d) { return d['weight']; }),
-        d3.max(g['links'], function(d) { return d['weight']; })
-      ];
-
-      // var nodeSize = d3.scale.linear()
-      //                  .domain(nodeSizeDomain)
-      //                  .range([3, 30]);
-
-      var linkStrength = d3.scale.linear()
-                        .domain(weightDomain)
-                        .range([0, 0.75])
-                        .clamp(true);
-
-      var linkDistance = d3.scale.linear()
-                        .domain(weightDomain)
-                        .range([50, 400])
-                        .clamp(true);
-
-      // Add a bit of padding to each node to prevent them from  hitting the
-      // edge of the SVG container and randomized to make it look more natural
-      var randBuffer = d3.random.normal(20, 8);
-      for (var i = g.nodes.length - 1; i >= 0; i--) {
-        var node = g.nodes[i];
-        node.padding = nodeSize(node) + randBuffer();
-      };
 
       // Add neighbor and edges arrays to each of the nodes
       for (var i = g.links.length - 1; i >= 0; i--) {
@@ -79,6 +23,42 @@ window.onload = function() {
         target.edges.push(link);
       };
 
+      initializeNodeSizeAttributeDropdown(g);
+
+      /* Scale functions */
+
+      function nodeSize(node) {
+        var nodeSizeAttribute = d3.select("#node-size-attribute").node().value;
+
+        var nodeSizeDomain = [
+          d3.min(g["nodes"], function(n) { return n[nodeSizeAttribute]; }),
+          d3.max(g["nodes"], function(n) { return n[nodeSizeAttribute]; })
+        ];
+
+        var nodeSizeScale = d3.scale.linear()
+                              .domain(nodeSizeDomain)
+                              .range([3, 30]);
+
+        return nodeSizeScale(node[nodeSizeAttribute]);
+      }
+
+      var weightDomain = [
+        d3.min(g['links'], function(d) { return d['weight']; }),
+        d3.max(g['links'], function(d) { return d['weight']; })
+      ];
+
+      var linkStrength = d3.scale.linear()
+                        .domain(weightDomain)
+                        .range([0, 0.75])
+                        .clamp(true);
+
+      var linkDistance = d3.scale.linear()
+                        .domain(weightDomain)
+                        .range([50, 400])
+                        .clamp(true);
+
+      /* Create the network */
+
       var tip = d3.tip()
                   .attr('class', 'd3-tip')
                   .html(function(d) {
@@ -92,24 +72,14 @@ window.onload = function() {
 
       var force = d3.layout.force()
                     .charge(-225)
-                    .linkDistance(function(d) {
-                        return linkDistance(d.weight);
-                    })
-                    .linkStrength(function(d) {
-                        return linkStrength(d.weight);
-                    })
+                    .linkDistance(function(d) { return linkDistance(d.weight); })
+                    .linkStrength(function(d) { return linkStrength(d.weight); })
                     .gravity(.1)
                     .nodes(g.nodes)
                     .links(g.links)
                     .size([w, h])
+                    .on("tick", tick)
                     .start();
-
-      function resizeNodes() {
-        nodeSizeAttribute = this.options[this.selectedIndex].value;
-        force.resume();
-      }
-      d3.select("#node-size-attribute").on("change", resizeNodes);
-
 
       var links = svg.selectAll(".link")
                      .data(g.links)
@@ -130,9 +100,7 @@ window.onload = function() {
                      .enter()
                      .append("circle")
                      .attr("class", "node")
-                     .attr("r", function(d) {
-                        return nodeSize(d);
-                     })
+                     .attr("r", function(d) { return nodeSize(d); })
                      .style("fill", function(d) {
                         if (d.party_affiliation === "democrat") {
                             return "#c5d7ea";
@@ -153,11 +121,15 @@ window.onload = function() {
                      })
                      .on("mouseover.tip-show", tip.show)
                      .on("mouseout.tip-hide", tip.hide)
+                     .on("mouseover.highlight-neighborhoods", highlightNeighborhood)
+                     .on("mouseout.restore-neighborhoods", restoreNeighborhoods)
                      .call(force.drag);
 
-      // Add mouseout and mouseover event listeners to highlight a
-      // a neighborhood of nodes whenever the user hovers over one.
-      nodes.on("mouseover", function(source) {
+
+      /* Event handlers */
+
+      function highlightNeighborhood(source) {
+        // Highlight the current node's neighbors
         d3.selectAll("circle")
           .data(source.neighbors.concat([source]), function(d) { return d.name; })
             .style("fill-opacity", 1.0)
@@ -166,16 +138,21 @@ window.onload = function() {
             .style("fill-opacity", 0.3)
             .style("stroke-opacity", 0.3);
 
+        // Highlight the current node's edges
         d3.selectAll("line")
           .data(source.edges, function(d) { return d.source.name + " - " + d.target.name; })
             .style("stroke", function(d) { return "rgba(32, 32, 32, " + linkStrength(d.weight) + ")"; })
           .exit()
             .style("stroke-opacity", 0);
-      }).on("mouseout", function(d) {
+      }
+
+      function restoreNeighborhoods(source) {
+        // Return all nodes to their normal opacity
         d3.selectAll('circle')
           .style("fill-opacity", 1.0)
           .style("stroke-opacity", 1.0);
 
+        // Return all links to their normal opacity and stroke
         d3.selectAll("line")
           .style("stroke-opacity", 1.0)
           .style("stroke", function(d) {
@@ -183,30 +160,49 @@ window.onload = function() {
                 return "rgba(32, 32, 32, " + linkStrength(d.weight) + ")";
               }
           });
-      });
+      }
 
-      force.on("tick", function() {
+      function tick() {
           nodes.transition().duration(150)
-               .attr("r", function(d) {
-                 return nodeSize(d);
-               });
+               .attr("r", function(d) { return nodeSize(d); });
 
           // The code below was taken from Mike Bostock's Bounding Box example
           // which was shown in his talk on data visualization.
           // Example: http://mbostock.github.io/d3/talk/20110921/bounding.html
           // Talk Video: http://vimeo.com/29458354
+          var padding = 2;
           nodes.attr("cx", function(d) {
-                 return d.x = Math.max(d.padding, Math.min(w - d.padding, d.x));
+                 return d.x = Math.max(nodeSize(d) + padding, Math.min(w - (nodeSize(d) + padding), d.x));
                })
                .attr("cy", function(d) {
-                 return d.y = Math.max(d.padding, Math.min(h - d.padding, d.y));
+                 return d.y = Math.max(nodeSize(d) + padding, Math.min(h - (nodeSize(d) + padding), d.y));
                });
 
           links.attr("x1", function(d) { return d.source.x; })
                .attr("y1", function(d) { return d.source.y; })
                .attr("x2", function(d) { return d.target.x; })
                .attr("y2", function(d) { return d.target.y; });
-      })
+      }
 
-  });
+      /* Initialization methods */
+
+      function getNodeSizeAttribute(g) {
+        var graphAttrs = g.graph;
+        for (var i = graphAttrs.length - 1; i >= 0; i--) {
+          var attrs = graphAttrs[i];
+          if (attrs[0] === 'resize') {
+            return attrs[1];
+          }
+        };
+        return defaultNodeSizeAttribute;
+      }
+
+      function initializeNodeSizeAttributeDropdown(g) {
+        var nodeSizeAttribute = getNodeSizeAttribute(g);
+        var dropdown = d3.select("#node-size-attribute");
+        dropdown.node().value = nodeSizeAttribute;
+        dropdown.on("change", function() { force.resume(); });
+      }
+
+    });
 }
