@@ -7,8 +7,13 @@
     <script src="js/layout.js" charset="utf-8"></script>
     <style type="text/css">
         body {
-            text-align: center;
             font-family: "Helvetica Neue", Helvetica, sans-serif;
+        }
+
+        #content {
+            width: 900px;
+            margin: 0px auto;
+            text-align: center;
         }
 
         h1 {
@@ -54,13 +59,17 @@
     </style>
 </head>
 <body>
+  <div id="content">
     <h1>Congressional Network Analysis</h1>
-    <svg id="network"></svg>
-    <br>
-    <select name="node-size-attribute" id="node-size-attribute">
-      <option value="---" selected>--- None Selected ---</option>
-      <option value="degree">Degree</option>
-      <option value="betweenness">Betweenness</option>
-    </select>
+    <svg id="network" width="700" height="400">
+      <foreignObject x="540" y="7" width="200" height="20">
+        <select name="node-size-attribute" id="node-size-attribute">
+          <option value="---" selected>None Selected</option>
+          <option value="degree">Degree</option>
+          <option value="betweenness">Betweenness</option>
+        </select>
+      </foreignObject>
+    </svg>
+  </div>
 </body>
 </html>
