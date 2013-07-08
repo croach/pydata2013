@@ -1,0 +1,40 @@
+Blumenthal has worked with lots of people (high degree) and looks relatively important form the degree side, but when taking a look at the betweenness graph, he seems less important since the majority of his strong ties are between other democrats.
+
+On the degree graph, the independents (sanders and lieberman) look somewhat important, but when viewed on the betweenness graph, their relative importance drops siginificantly.
+
+Likewise, Murkowski shows up on the low-end of moderate players on the degree graph, but when viewed on the betweenness graph, her very strong tie with fellow state senator and opposing party member Begich makes a key player if you were trying to get bipartisan support for a bill.
+
+
+---
+
+This page started out as a bit of code that I wrote for my talk on network science at [PyData 2013][pydata] (Silicon Valley). It was meant to serve as a simple example of how to apply social network analysis techniques to a real world dataset. After the talk, I decided to get the code cleaned up a bit so that I could release it for anyone who had seen the talk, or anyone who might have a general interest in the topic. As I worked at cleaning the code up, I started adding a few little features here and there and started to think about how I could make the visualization easier to execute since Matplotlib can sometimes be a bit burdensome to install. The solution was to display the visualization in the browser. This way it could viewed without needing to install a bunch of third-party Python libraries.
+
+# Quick Overview
+
+In this section, quickly describe what the graph shows and how to interact with it.
+
+# Insights
+
+## Graph topography
+
+Just by looking at the network, without resizing the nodes relative to some measure of importance, we can already take away some interesting tidbits. The first thing I noticed when looking at the graph is that there are quite a few more ties between members of the Democratic Party than there are between their Republican counterparts. In addition, it also appears as if the individual ties themselves are stronger on the Democratic side. Given these observations, and your political party affiliation, you could come up with a few different stories to explain these discrepancies. If your vote tends to fall more towards the Democratic side of the aisle, you might say that the Democrats are simply working harder and producing more legislation while the Replublicans are being obstructionists as always. However, if your political preferences tend to lean a little further right, you could say that the Republicans, having a fundamental belief in small government, are purposefully keeping the number of proposed bills down, and that, of course, quantity does not equal quality.
+
+Now, you'll need to take these observations with a grain of salt as I've purposefully cut out all of the links between nodes that had a weight of 10 (based on the number of bills worked on together) or lower in order to make the visualization perform tolerably, and also to make it possible to visually analyze the relationships in the graph. With that taken into account, it could be possible that the republican side of the senate has many more "weak" ties suggesting that they have indeed worked on several bills together, but they tend to work with a multitude of people rather than a select bunch.
+
+The last thing that I want you to see before we move onto the centrality measurements is the quality of the connections between the legislators. The intensity of each edge in the graph is relative to its weight, so the darker the line, the more bills a pair of legistrators have worked on together. Given that knowledge, you'll notice a couple of things in the graph. First, whenever you hover over a node in the graph, the node, and it's immediate neighborhood, will be highlighted allowing you to better observe the relationships that the senator behind the node has formed with his/her colleagues. Looking at several nodes this way, you'll no doubt observe a pattern whereby the strongest connection for a node tends to be with the other senator from the same state. Second, one relationship in particular always stands out to me, and that is the one between Sen. Lisa Murkowski [R-AK] and her partner in the senate, Sen. Mark Begich [D-AK]. This one is interesting because you have two senators from the same state who, with the interests of their home state in mind, have formed a strong working relationship with one another despite their opposing party affiliations. Though we've just seen how a network visualiztion can begin to help us ferret out important relationships such as this one, we'll see a little later on, just how important this type of relationhip can be when viewed with the right metric.
+
+# Degree
+
+- Confirms that democrats work harder
+- We start to see the most prolific senators
+- Should be fairly unbiased since it's only for one session of Congress, but, of course, rookies will have fewer links
+
+# Betweeness
+
+--- At some point mention community detection
+
+# The Details (i.e., the tech behind the visualization)
+
+# Conclusion (mention where to find the video of the talk, the slides, the source code)
+
+[pydata]: https://vimeo.com/pydata/videos
