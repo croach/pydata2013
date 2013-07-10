@@ -224,19 +224,19 @@ def sort_nodes(graph, m, desc=True):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__ % sys.argv[0],
         formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('congress', type=int, metavar='CONGRESS',
-        help='number for the meeting of congress (the ???th congress)')
+    parser.add_argument('session', type=int, metavar='SESSION',
+        help='session of congress (e.g., 112 for the 112th congress)')
     parser.add_argument('house', type=str, metavar='HOUSE',
         choices=['lower', 'representatives', 'upper', 'senate'],
         help='house of congress (lower/representatives, upper/senate)')
     parser.add_argument('--ignore-cache', action='store_true',
         help='ignore the cache and do a fresh download of all bills')
     parser.add_argument('--limit', '-l', type=int, action='store', default=None,
-        help='the number of bills to download (all bills by default)')
-    parser.add_argument('--trim', '-t', type=int, action='store', default=None,
-        help='remove all edges with a weight at or below the trim value')
+        help='number of bills to download (all bills by default)')
+    parser.add_argument('--trim', '-t', type=int, metavar='WEIGHT', action='store', default=None,
+        help='remove all edges at or below the given weight')
     parser.add_argument('--betweenness', '-b', action='store_true',
-        help='resize the nodes in the graph according to their betweenness')
+        help='resize nodes relative to their betweenness')
     args = parser.parse_args()
 
     # Create the .cache directory if it doesn't already exist
@@ -247,7 +247,7 @@ if __name__ == '__main__':
 
     # Get the bills (either from cache or a fresh download)
     house = 'lower' if args.house in ['lower', 'representatives'] else 'senate'
-    cache_filepath = os.path.join(cache_dir, '%s_%s.json' % (args.congress, house))
+    cache_filepath = os.path.join(cache_dir, '%s_%s.json' % (args.session, house))
     if args.ignore_cache or not os.path.exists(cache_filepath):
         bills = []
         progress.progress_bar(0)
