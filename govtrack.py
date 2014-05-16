@@ -261,7 +261,7 @@ if __name__ == '__main__':
     if args.ignore_cache or not os.path.exists(cache_filepath):
         bills = []
         progress.progress_bar(0)
-        for bill, i in get_bills(args.congress, args.house, limit=args.limit):
+        for bill, i in get_bills(args.session, args.house, limit=args.limit):
             bills.append(bill)
             progress.progress_bar(i)
         with open(cache_filepath, 'w') as fout:
