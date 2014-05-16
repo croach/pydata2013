@@ -50,7 +50,6 @@ except ImportError:
 
 import networkx as nx
 from networkx.readwrite import json_graph
-import matplotlib.pyplot as plt
 
 import url
 import progress
@@ -286,6 +285,11 @@ if __name__ == '__main__':
         g.node[node_id]['degree'] = degrees[node_id]
 
     if not args.browser:
+        # We only import matplotlib if the user opts to display the network
+        # outside of the browser since installing matplotlib can be a bear
+        # sometimes
+        import matplotlib.pyplot as plt
+
         pos = nx.fruchterman_reingold_layout(g)
         dems = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'democrat']
         reps = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'republican']
