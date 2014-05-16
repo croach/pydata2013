@@ -80,7 +80,7 @@ def get_bills(congress, house, limit=None):
     return query_api(path, congress=congress, bill_type=bill_type, limit=limit)
 
 
-def query_api(path, limit=None, **kwargs):
+def query_api(path, retry=3, limit=None, **kwargs):
     """Returns an iterator over the objects returned from the govtrack.us API.
 
     All additional keyword paramaters are passed onto the govtrack.us API in
@@ -94,6 +94,7 @@ def query_api(path, limit=None, **kwargs):
     Keyword Arguments:
     limit -- the number of objects to return. If None (default), all objects
         are returned
+    retry -- the number of times to try getting an object (default is 3)
     """
     url = GovTrackURL(path=path, **kwargs)
     while True:
@@ -106,7 +107,14 @@ def query_api(path, limit=None, **kwargs):
             offset += 1
             progress = int((float(offset)/limit) * 100)
             obj_url = GovTrackURL(path='%s/%s' % (path, obj['id']))
-            yield json.load(urllib2.urlopen(obj_url.to_string())), progress
+            # Sometimes we get back a 502 error. If we do, just try getting the
+            # object again. Attempt up to the 'retry' limit (default is 3)
+            for i in range(retry):
+                try:
+                    yield json.load(urllib2.urlopen(obj_url.to_string())), progress
+                    break
+                except urllib2.HTTPError:
+                    pass
 
             # If the limit argument is set, exit after we've reached that limit
             if limit is not None and offset >= limit:
