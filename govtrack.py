@@ -1,34 +1,44 @@
 #!/usr/bin/env python
 
-"""
-Analyze congressional partisanship using the tools of Social Network Analysis.
+"""Analyze congressional partisanship using Social Network Analysis.
 
-This script will download data from govtrack.us on bills that were introduced
-in a specific meeting of congress and for one of the two houses. The bill data
-is then used to construct a network of congressional members where edges
-between members of congress are based on the number of bills the two members
-have cosponsored together.
+This script will download data from govtrack.us on bills that were
+introduced in a specific meeting of congress and for one of the two
+houses. The bill data is then used to construct a network of
+congressional members where edges between members of congress are
+based on the number of bills the two members have cosponsored
+together.
 
-Since the downloading of bill data can take a very long time and put stress on
-the free (and excellent) govtrack.us API, this script automatically caches the
-downloaded data after its first retrieval. The data is cached into a hidden
-directory called .cache in the same directory where the script is located. To
-ignore the cached data and retrieve it again, you can use the --ignore-cache
-option.
+Since the downloading of bill data can take a very long time and put
+stress on the free (and excellent) govtrack.us API, this script
+automatically caches the downloaded data after its first
+retrieval. The data is cached into a hidden directory called .cache in
+the same directory where the script is located. To ignore the cached
+data and retrieve it again, you can use the --ignore-cache option.
 
-As an example of how to use the script, if you wanted to view the network for
-the House of Representatives of the 112th congress (January 3, 2011 -
-January 3, 2013), and you want to see it in the browser, you could use the
-following command:
+As an example of how to use the script, if you wanted to view the
+network for the House of Representatives of the 112th congress
+(January 3, 2011 - January 3, 2013), and you want to see it in the
+browser, you could use the following command:
 
-    $ python %s -b --resize=betweenness 112 lower
+    $ python {0} -b --resize=betweenness 112 lower
 
-A few things to notice in the previous command: First, you could have also used
-'representatives' in place of lower, if it makes the command a little more
-intuitive for you. Second, the '-b' (--browser) option turns on in-browser
-viewing. Finally, the '-r' (--resize) option turns on resizing of the nodes
-relative to a given centrality statistic, at this point the 'resize' value can
-be set to either 'degree' or 'betweenness'.
+A few things to notice in the previous command: First, you could have
+also used 'representatives' in place of lower, if it makes the command
+a little more intuitive for you. Second, the '-b' (--browser) option
+turns on in-browser viewing. Finally, the '-r' (--resize) option turns
+on resizing of the nodes relative to a given centrality statistic, at
+this point the 'resize' value can be set to either 'degree' or
+'betweenness'.
+
+To output the graph to a file for examination in a third party tool,
+use the '--output' (or '-o') option. To use this option you must give
+a filename to which the graph will be written. The format of the
+resultant file is based on the given filename's extension. As an
+example, you could output the graph for the 112th meeting of the
+senate in GraphML format with the following command:
+
+    $ python {0} -o 112_senate.graphml 112 senate
 
 """
 
@@ -59,6 +69,35 @@ class GovTrackURL(url.URL):
     def __init__(self, netloc='www.govtrack.us', **kwargs):
         super(GovTrackURL, self).__init__(netloc=netloc, **kwargs)
 
+class Graph(nx.Graph):
+    """NetworkX Graph subclass that supports serialization to a file
+    """
+
+    supported_formats = {
+        '.adjlist': 'adjlist',
+        '.edgelist': 'edgelist',
+        '.gexf': 'gexf',
+        '.gml': 'gml',
+        '.gpickle': 'gpickle',
+        '.graphml': 'graphml',
+        '.yaml': 'yaml',
+        '.net': 'pajek',
+    }
+
+    def write_graph(self, filename):
+        """Writes the graph to the file with format based on file extension
+        """
+        _, ext = os.path.splitext(filename)
+        try:
+            format = self.supported_formats[ext.lower()]
+        except KeyError:
+            raise ValueError("No format could be found for the extension '%s'. " \
+                             "The supported formats are [%s]" %
+                             (ext, ', '.join(self.supported_formats.keys())))
+
+        write_fn = getattr(nx, 'write_%s' % format)
+        write_fn(self, filename)
+
 
 def get_bills(congress, house, limit=None):
     """Returns an iterator over the bills introduced in the given congress.
@@ -69,6 +108,7 @@ def get_bills(congress, house, limit=None):
 
     Keyword Arguments:
     limit -- the number of bills to return
+
     """
     path = '/api/v2/bill'
     if house in ['lower', 'representatives']:
@@ -95,6 +135,7 @@ def query_api(path, retry=3, limit=None, **kwargs):
     limit -- the number of objects to return. If None (default), all objects
         are returned
     retry -- the number of times to try getting an object (default is 3)
+
     """
     url = GovTrackURL(path=path, **kwargs)
     while True:
@@ -133,6 +174,7 @@ def party_affiliation(name):
     Given a name with the following format:
         TITLE FIRST_NAME LAST_NAME [PARTY_AFFILIATION-DISTRICT_OR_STATE]
     this function parses out the party affiliation and returns it.
+
     """
     parties = {'R': 'republican', 'D': 'democrat', 'I': 'independent'}
     party_abbrev = re.search('\[([A-Z])-[A-Z]{2}[^\]]*\]', name).groups()[0]
@@ -152,6 +194,7 @@ def clean_node_attr_dict(attr_dict):
 
     Arguments:
     attr_dict -- the node attribute dict to be cleaned
+
     """
     n = copy.deepcopy(attr_dict)
 
@@ -184,8 +227,9 @@ def create_graph(bills):
 
     Arguments:
     bills -- a list of dicts where each dict represents a bill in congress
+
     """
-    g = nx.Graph()
+    g = Graph()
     for bill in bills:
         sponsor = clean_node_attr_dict(bill['sponsor'])
         if not g.has_node(sponsor['bioguideid']):
@@ -210,6 +254,7 @@ def trim_edges(graph, weight=1):
     Keyword arguments:
     weight -- the value for which all edges with weights equal to, or less than
         it, will be removed (default 1).
+
     """
     g = graph.copy()
     trimmed_edges = []
@@ -229,6 +274,7 @@ def sort_nodes(graph, m, desc=True):
 
     Keyword Arguments:
     desc -- set to True to sort descending (default), False for ascending
+
     """
     sorted_keys = sorted(m.iteritems(), key=lambda (k, v): (v, k), reverse=desc)
     nodes = [graph.node[k] for k, _ in sorted_keys]
@@ -236,24 +282,25 @@ def sort_nodes(graph, m, desc=True):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__ % sys.argv[0],
+    parser = argparse.ArgumentParser(description=__doc__.format(sys.argv[0]),
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('session', type=int, metavar='SESSION',
         help='session of congress (e.g., 112 for the 112th congress)')
-    parser.add_argument('house', type=str, metavar='HOUSE',
+    parser.add_argument('house', metavar='HOUSE',
         choices=['lower', 'representatives', 'upper', 'senate'],
         help='house of congress (lower/representatives, upper/senate)')
     parser.add_argument('--ignore-cache', action='store_true',
         help='ignore the cache and do a fresh download of all bills')
-    parser.add_argument('--limit', '-l', type=int, action='store', default=None,
+    parser.add_argument('--limit', '-l', type=int,
         help='number of bills to download (all bills by default)')
-    parser.add_argument('--trim', '-t', type=int, metavar='WEIGHT', action='store', default=None,
+    parser.add_argument('--trim', '-t', type=int, metavar='WEIGHT',
         help='remove all edges at or below the given weight')
-    parser.add_argument('--resize', '-r', action='store', default=None,
-        choices=['degree', 'betweenness'],
+    parser.add_argument('--resize', '-r', choices=['degree', 'betweenness'],
         help='resize nodes relative to a centrality metric')
     parser.add_argument('--browser', '-b', action='store_true',
         help='show the network visualization in a browser (uses D3)')
+    parser.add_argument('--output', '-o', metavar='OUTPUT_FILE',
+        help='output the network to the given file')
     args = parser.parse_args()
 
     root_dir = os.path.dirname(os.path.realpath(__file__))
@@ -292,25 +339,9 @@ if __name__ == '__main__':
         g.node[node_id]['betweenness'] = betweenness_centralities[node_id]
         g.node[node_id]['degree'] = degrees[node_id]
 
-    if not args.browser:
-        # We only import matplotlib if the user opts to display the network
-        # outside of the browser since installing matplotlib can be a bear
-        # sometimes
-        import matplotlib.pyplot as plt
-
-        pos = nx.fruchterman_reingold_layout(g)
-        dems = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'democrat']
-        reps = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'republican']
-        inds = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'independent']
-
-        node_size = lambda nid: g.node[nid][args.resize] if args.resize else 300
-
-        nx.draw_networkx_nodes(g, pos, nodelist=dems, node_color='blue', node_size=map(node_size, dems))
-        nx.draw_networkx_nodes(g, pos, nodelist=reps, node_color='red', node_size=map(node_size, reps))
-        nx.draw_networkx_nodes(g, pos, nodelist=inds, node_color='gray', node_size=map(node_size, inds))
-        nx.draw_networkx_edges(g, pos, alpha=0.05)
-        plt.show()
-    else:
+    if args.output is not None:
+        g.write_graph(args.output)
+    elif args.browser:
         # TODO: Create a script that compiles all external files into the
         #       govtrack file (see virtualenv for details on how to do this).
         #       With that done, create all of the HTML, CSS, and JS files on
@@ -337,3 +368,21 @@ if __name__ == '__main__':
             p.join()
         except KeyboardInterrupt:
             p.terminate()
+    else:
+        # We only import matplotlib if the user opts to display the network
+        # outside of the browser since installing matplotlib can be a bear
+        # sometimes
+        import matplotlib.pyplot as plt
+
+        pos = nx.fruchterman_reingold_layout(g)
+        dems = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'democrat']
+        reps = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'republican']
+        inds = [n for n in g.nodes() if g.node[n]['party_affiliation'] == 'independent']
+
+        node_size = lambda nid: g.node[nid][args.resize] if args.resize else 300
+
+        nx.draw_networkx_nodes(g, pos, nodelist=dems, node_color='blue', node_size=map(node_size, dems))
+        nx.draw_networkx_nodes(g, pos, nodelist=reps, node_color='red', node_size=map(node_size, reps))
+        nx.draw_networkx_nodes(g, pos, nodelist=inds, node_color='gray', node_size=map(node_size, inds))
+        nx.draw_networkx_edges(g, pos, alpha=0.05)
+        plt.show()
