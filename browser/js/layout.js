@@ -63,6 +63,17 @@ window.onload = function() {
                         .range([50, 400])
                         .clamp(true);
 
+      /**
+       * Determines the stroke of each line based on its weight.
+       */
+      function linkStroke(d) {
+          // Hiding some of the weaker links to make the
+          // visualization more responsive and less cluttered
+          if (d.weight > 10) {
+            return "rgba(32, 32, 32, " + linkStrength(d.weight * 0.7) + ")";
+          }
+       }
+
       /* Create the network */
 
       var tip = d3.tip()
@@ -92,13 +103,7 @@ window.onload = function() {
                      .enter()
                      .append("line")
                      .attr("class", "link")
-                     .style("stroke", function(d) {
-                        // Hiding some of the weaker links to make the
-                        // visualization more responsive and less cluttered
-                        if (d.weight > 10) {
-                          return "rgba(32, 32, 32, " + linkStrength(d.weight) + ")";
-                        }
-                     });
+                     .style("stroke", linkStroke);
 
 
       var nodes = svg.selectAll(".node")
@@ -161,11 +166,7 @@ window.onload = function() {
         // Return all links to their normal opacity and stroke
         d3.selectAll("line")
           .style("stroke-opacity", 1.0)
-          .style("stroke", function(d) {
-              if (d.weight > 10) {
-                return "rgba(32, 32, 32, " + linkStrength(d.weight) + ")";
-              }
-          });
+          .style("stroke", linkStroke);
       }
 
       function tick() {
